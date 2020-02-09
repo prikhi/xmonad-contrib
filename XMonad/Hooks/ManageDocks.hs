@@ -38,7 +38,7 @@ import Foreign.C.Types (CLong)
 import XMonad.Layout.LayoutModifier
 import XMonad.Util.Types
 import XMonad.Util.WindowProperties (getProp32s)
-import XMonad.Util.XUtils (fi)
+import XMonad.Util.XUtils (fi, safeGetWindowAttributes)
 import qualified XMonad.Util.ExtensibleState as XS
 import Data.Monoid (All(..), mempty)
 import Data.Functor((<$>))
@@ -187,9 +187,13 @@ calcGap ss = withDisplay $ \dpy -> do
     -- we grab the window attributes of the root window rather than checking
     -- the width of the screen because xlib caches this info and it tends to
     -- be incorrect after RAndR
-    wa <- io $ getWindowAttributes dpy rootw
-    let screen = r2c $ Rectangle (fi $ wa_x wa) (fi $ wa_y wa) (fi $ wa_width wa) (fi $ wa_height wa)
-    return $ \r -> c2r $ foldr (reduce screen) (r2c r) struts
+    mwa <- io $ safeGetWindowAttributes dpy rootw
+    case mwa of
+        Just wa ->
+            let screen = r2c $ Rectangle (fi $ wa_x wa) (fi $ wa_y wa) (fi $ wa_width wa) (fi $ wa_height wa)
+            in  return $ \r -> c2r $ foldr (reduce screen) (r2c r) struts
+        Nothing ->
+            return id
   where careAbout (s,_,_,_) = s `S.member` ss
 
 -- | Adjust layout automagically: don't cover up any docks, status

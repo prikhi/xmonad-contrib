@@ -8,7 +8,7 @@
 -- Stability   :  unstable
 -- Portability :  not portable
 --
--- Module to dump window information for diagnostic/debugging purposes. See 
+-- Module to dump window information for diagnostic/debugging purposes. See
 -- "XMonad.Hooks.DebugEvents" and "XMonad.Hooks.DebugStack" for practical uses.
 --
 -----------------------------------------------------------------------------
@@ -18,6 +18,7 @@ module XMonad.Util.DebugWindow (debugWindow) where
 import           Prelude
 
 import           XMonad
+import           XMonad.Util.XUtils             (safeGetWindowAttributes)
 
 import           Codec.Binary.UTF8.String        (decodeString)
 import           Control.Exception.Extensible                          as E
@@ -96,7 +97,7 @@ debugWindow w =  do
                       ,show x
                       ,',':show y
                       ,if null c then "" else ' ':c
-                      ,if null cmd then "" else ' ':cmd 
+                      ,if null cmd then "" else ' ':cmd
                       ,rb
                       ]
 
@@ -154,14 +155,6 @@ wrap s =  ' ' : '"' : wrap' s ++ "\""
                   | s' == '\\' = '\\' : s' : wrap' ss
                   | otherwise  =        s' : wrap' ss
     wrap' ""                   =             ""
-
--- Graphics.X11.Extras.getWindowAttributes is bugggggggy
-safeGetWindowAttributes     :: Display -> Window -> IO (Maybe WindowAttributes)
-safeGetWindowAttributes d w =  alloca $ \p -> do
-  s <- xGetWindowAttributes d w p
-  case s of
-    0 -> return Nothing
-    _ -> Just <$> peek p
 
 -- and so is getCommand
 safeGetCommand     :: Display -> Window -> X [String]

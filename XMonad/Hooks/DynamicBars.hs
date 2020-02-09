@@ -91,9 +91,9 @@ data DynStatusBarInfo = DynStatusBarInfo
 instance ExtensionClass DynStatusBarInfo where
   initialValue = DynStatusBarInfo []
 
-type DynamicStatusBar = ScreenId -> IO Handle
-type DynamicStatusBarCleanup = IO ()
-type DynamicStatusBarPartialCleanup = ScreenId -> IO ()
+type DynamicStatusBar = ScreenId -> X Handle
+type DynamicStatusBarCleanup = X ()
+type DynamicStatusBarPartialCleanup = ScreenId -> X ()
 
 dynStatusBarSetup :: X ()
 dynStatusBarSetup = do
@@ -126,10 +126,8 @@ updateStatusBars sb cleanup = do
   (dsbInfoScreens, dsbInfoHandles) <- XS.get >>= return . unzip . dsbInfo
   screens <- getScreens
   when (screens /= dsbInfoScreens) $ do
-      newHandles <- liftIO $ do
-          hClose `mapM_` dsbInfoHandles
-          cleanup
-          mapM sb screens
+      liftIO $ hClose `mapM_` dsbInfoHandles
+      newHandles <- cleanup >> mapM sb screens
       XS.put $ DynStatusBarInfo (zip screens newHandles)
 
 updateStatusBars' :: DynamicStatusBar -> DynamicStatusBarPartialCleanup -> X ()
@@ -139,9 +137,9 @@ updateStatusBars' sb cleanup = do
   when (screens /= dsbInfoScreens) $ do
       let oldInfo = zip dsbInfoScreens dsbInfoHandles
       let (infoToKeep, infoToClose) = partition (flip elem screens . fst) oldInfo
-      newInfo <- liftIO $ do
-          mapM_ hClose $ map snd infoToClose
-          mapM_ cleanup $ map fst infoToClose
+      liftIO $ mapM_ (hClose . snd) infoToClose
+      newInfo <- do
+          mapM_ (cleanup . fst) infoToClose
           let newScreens = screens \\ dsbInfoScreens
           newHandles <- mapM sb newScreens
           return $ zip newScreens newHandles

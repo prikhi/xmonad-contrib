@@ -25,6 +25,7 @@ module XMonad.Actions.Warp (
 import Data.List
 import XMonad
 import XMonad.StackSet as W
+import XMonad.Util.XUtils (safeGetWindowAttributes)
 
 {- $usage
 You can use this module with the following in your @~\/.xmonad\/xmonad.hs@:
@@ -93,8 +94,12 @@ warpToWindow :: Rational -> Rational -> X ()
 warpToWindow h v =
     withDisplay $ \d ->
         withFocused $ \w -> do
-            wa <- io $ getWindowAttributes d w
-            warp w (fraction h (wa_width wa)) (fraction v (wa_height wa))
+            mwa <- io $ safeGetWindowAttributes d w
+            case mwa of
+                Just wa ->
+                    warp w (fraction h (wa_width wa)) (fraction v (wa_height wa))
+                Nothing ->
+                    return ()
 
 -- | Warp the pointer to the given position (top left = (0,0), bottom
 --   right = (1,1)) on the given screen.

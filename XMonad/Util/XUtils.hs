@@ -30,9 +30,11 @@ module XMonad.Util.XUtils
     , stringToPixel
     , pixelToString
     , fi
+    , safeGetWindowAttributes
     ) where
 
 import Data.Maybe
+import Foreign
 import XMonad
 import XMonad.Util.Font
 import XMonad.Util.Image
@@ -209,3 +211,11 @@ mkWindow d s rw x y w h p o = do
            set_background_pixel  attributes p
            createWindow d rw x y w h 0 (defaultDepthOfScreen s)
                         inputOutput visual attrmask attributes
+
+-- Graphics.X11.Extras.getWindowAttributes is bugggggggy
+safeGetWindowAttributes     :: Display -> Window -> IO (Maybe WindowAttributes)
+safeGetWindowAttributes d w =  alloca $ \p -> do
+  s <- xGetWindowAttributes d w p
+  case s of
+    0 -> return Nothing
+    _ -> Just `fmap` peek p

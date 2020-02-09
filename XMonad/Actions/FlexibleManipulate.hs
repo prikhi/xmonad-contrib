@@ -23,8 +23,9 @@ module XMonad.Actions.FlexibleManipulate (
 ) where
 
 import XMonad
+import XMonad.Util.XUtils (safeGetWindowAttributes)
 import qualified Prelude as P
-import Prelude (($), (.), fst, snd, uncurry, const, id, Ord(..), Monad(..), fromIntegral, Double, Integer, map, round, otherwise)
+import Prelude (($), (.), fst, snd, uncurry, const, id, Maybe(..), Ord(..), Monad(..), fromIntegral, Double, Integer, map, round, otherwise)
 
 -- $usage
 -- First, add this import to your @~\/.xmonad\/xmonad.hs@:
@@ -80,7 +81,7 @@ position = const 0.5
 mouseWindow :: (Double -> Double) -> Window -> X ()
 mouseWindow f w = whenX (isClient w) $ withDisplay $ \d -> do
     io $ raiseWindow d w
-    [wpos, wsize] <- io $ getWindowAttributes d w >>= return . winAttrs
+    [wpos, wsize] <- io $ safeGetWindowAttributes d w >>= return . winAttrs
     sh <- io $ getWMNormalHints d w
     pointer <- io $ queryPointer d w >>= return . pointerPos
 
@@ -103,8 +104,9 @@ mouseWindow f w = whenX (isClient w) $ withDisplay $ \d -> do
 
   where
     pointerPos (_,_,_,px,py,_,_,_) = (fromIntegral px,fromIntegral py) :: Pnt
-    winAttrs :: WindowAttributes -> [Pnt]
-    winAttrs x = pairUp $ map (fromIntegral . ($ x)) [wa_x, wa_y, wa_width, wa_height]
+    winAttrs :: Maybe WindowAttributes -> [Pnt]
+    winAttrs (Just x) = pairUp $ map (fromIntegral . ($ x)) [wa_x, wa_y, wa_width, wa_height]
+    winAttrs Nothing = [(0, 0), (0, 0)]
 
 
 -- I'd rather I didn't have to do this, but I hate writing component 2d math
@@ -132,4 +134,3 @@ infixl 7  *, /
 (*) = zipP (P.*)
 (/) :: (P.Fractional a) => (a,a) -> (a,a) -> (a,a)
 (/) = zipP (P./)
-

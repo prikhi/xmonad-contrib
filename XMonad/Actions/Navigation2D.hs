@@ -68,6 +68,7 @@ import qualified XMonad.StackSet as W
 import qualified XMonad.Util.ExtensibleState as XS
 import XMonad.Util.EZConfig (additionalKeys, additionalKeysP)
 import XMonad.Util.Types
+import XMonad.Util.XUtils (safeGetWindowAttributes)
 
 -- $usage
 -- #Usage#
@@ -628,9 +629,8 @@ actOnScreens act wrap = withWindowSet $ \winset -> do
 isMapped :: Window -> X Bool
 isMapped win  =  withDisplay
               $  \dpy -> io
-              $  (waIsUnmapped /=)
-              .  wa_map_state
-             <$> getWindowAttributes dpy win
+              $  maybe False ((waIsUnmapped /=) . wa_map_state)
+             <$> safeGetWindowAttributes dpy win
 
 ----------------------------------------------------------------------------------------------------
 ----------------------------------------------------------------------------------------------------

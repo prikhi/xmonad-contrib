@@ -24,7 +24,7 @@ module XMonad.Actions.UpdatePointer
     where
 
 import XMonad
-import XMonad.Util.XUtils (fi)
+import XMonad.Util.XUtils (fi, safeGetWindowAttributes)
 import Control.Arrow
 import Control.Monad
 import XMonad.StackSet (member, peek, screenDetail, current)
@@ -68,10 +68,9 @@ updatePointer refPos ratio = do
   let defaultRect = screenRect $ screenDetail $ current ws
   rect <- case peek ws of
         Nothing -> return defaultRect
-        Just w  -> do tryAttributes <- io $ try $ getWindowAttributes dpy w
-                      return $ case tryAttributes of
-                        Left (_ :: SomeException) -> defaultRect
-                        Right attributes          -> windowAttributesToRectangle attributes
+        Just w  -> liftIO $ maybe defaultRect windowAttributesToRectangle
+                        <$> safeGetWindowAttributes dpy w
+
   root <- asks theRoot
   mouseIsMoving <- asks mouseFocused
   (_sameRoot,_,currentWindow,rootX,rootY,_,_,_) <- io $ queryPointer dpy root
@@ -107,4 +106,3 @@ lerp r a b = (1 - r) * realToFrac a + r * realToFrac b
 clip :: Ord a => (a, a) -> a -> a
 clip (lower, upper) x = if x < lower then lower
     else if x > upper then upper else x
-

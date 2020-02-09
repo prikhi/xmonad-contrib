@@ -17,6 +17,7 @@ module XMonad.Actions.NoBorders (
 ) where
 
 import XMonad
+import XMonad.Util.XUtils (safeGetWindowAttributes)
 
 -- | Toggle the border of the currently focused window. To use it, add a
 -- keybinding like so:
@@ -27,7 +28,7 @@ toggleBorder :: Window -> X ()
 toggleBorder w = do
     bw <- asks (borderWidth . config)
     withDisplay $ \d -> io $ do
-        cw <- wa_border_width <$> getWindowAttributes d w
+        cw <- maybe 0 wa_border_width <$> safeGetWindowAttributes d w
         if cw == 0
             then setWindowBorderWidth d w bw
             else setWindowBorderWidth d w 0

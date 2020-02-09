@@ -36,6 +36,7 @@ module XMonad.Hooks.PositionStoreHooks (
 import XMonad
 import qualified XMonad.StackSet as W
 import XMonad.Util.PositionStore
+import XMonad.Util.XUtils
 import XMonad.Hooks.ManageDocks
 import XMonad.Layout.Decoration
 
@@ -72,27 +73,28 @@ positionStoreInit :: Maybe Theme -> Window -> X ()
 positionStoreInit mDecoTheme w  = withDisplay $ \d -> do
         let decoH = maybe 0 decoHeight mDecoTheme   -- take decoration into account, which - in its current
                                                     -- form - makes windows smaller to make room for it
-        wa <- io $ getWindowAttributes d w
+        mwa <- io $ safeGetWindowAttributes d w
         ws <- gets windowset
         arbitraryOffsetX <- randomIntOffset
         arbitraryOffsetY <- randomIntOffset
-        if (wa_x wa == 0) && (wa_y wa == 0)
-            then do
-                let sr@(Rectangle srX srY _ _) = screenRect . W.screenDetail . W.current $ ws
-                modifyPosStore (\ps -> posStoreInsert ps w
-                                        (Rectangle (srX + fi arbitraryOffsetX)
-                                                   (srY + fi arbitraryOffsetY)
-                                                    (fi $ wa_width wa)
-                                                    (decoH + fi (wa_height wa))) sr )
-            else do
-                sc <- fromMaybe (W.current ws) <$> pointScreen (fi $ wa_x wa) (fi $ wa_y wa)
-                let sr = screenRect . W.screenDetail $ sc
-                sr' <- fmap ($ sr) (calcGap $ S.fromList [minBound .. maxBound]) -- take docks into account, accepting
-                                                                                       -- a somewhat unfortunate inter-dependency
-                                                                                       -- with 'XMonad.Hooks.ManageDocks'
-                modifyPosStore (\ps -> posStoreInsert ps w
-                                        (Rectangle (fi $ wa_x wa) (fi (wa_y wa) - fi decoH)
-                                            (fi $ wa_width wa) (decoH + fi (wa_height wa))) sr' )
+        flip (maybe $ return ()) mwa $ \wa ->
+            if (wa_x wa == 0) && (wa_y wa == 0)
+                then do
+                    let sr@(Rectangle srX srY _ _) = screenRect . W.screenDetail . W.current $ ws
+                    modifyPosStore (\ps -> posStoreInsert ps w
+                                            (Rectangle (srX + fi arbitraryOffsetX)
+                                                       (srY + fi arbitraryOffsetY)
+                                                        (fi $ wa_width wa)
+                                                        (decoH + fi (wa_height wa))) sr )
+                else do
+                    sc <- fromMaybe (W.current ws) <$> pointScreen (fi $ wa_x wa) (fi $ wa_y wa)
+                    let sr = screenRect . W.screenDetail $ sc
+                    sr' <- fmap ($ sr) (calcGap $ S.fromList [minBound .. maxBound]) -- take docks into account, accepting
+                                                                                           -- a somewhat unfortunate inter-dependency
+                                                                                           -- with 'XMonad.Hooks.ManageDocks'
+                    modifyPosStore (\ps -> posStoreInsert ps w
+                                            (Rectangle (fi $ wa_x wa) (fi (wa_y wa) - fi decoH)
+                                                (fi $ wa_width wa) (decoH + fi (wa_height wa))) sr' )
     where
         randomIntOffset :: X (Int)
         randomIntOffset = io $ randomRIO (42, 242)

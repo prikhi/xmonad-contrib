@@ -29,7 +29,7 @@ import qualified XMonad.StackSet as W
 import XMonad.Actions.GridSelect
 import XMonad.Layout.Maximize
 import XMonad.Actions.Minimize
-import XMonad.Util.XUtils (fi)
+import XMonad.Util.XUtils (fi, safeGetWindowAttributes)
 
 -- $usage
 --
@@ -71,9 +71,13 @@ windowMenu = withFocused $ \w -> do
 getSize :: Window -> X (Rectangle)
 getSize w = do
   d  <- asks display
-  wa <- io $ getWindowAttributes d w
-  let x = fi $ wa_x wa
-      y = fi $ wa_y wa
-      wh = fi $ wa_width wa
-      ht = fi $ wa_height wa
-  return (Rectangle x y wh ht)
+  mwa <- io $ safeGetWindowAttributes d w
+  case mwa of
+    Just wa ->
+      let x = fi $ wa_x wa
+          y = fi $ wa_y wa
+          wh = fi $ wa_width wa
+          ht = fi $ wa_height wa
+      in  return (Rectangle x y wh ht)
+    Nothing ->
+      return (Rectangle 0 0 0 0)
